@@ -1,0 +1,56 @@
+<div id="box"></div
+CSS代码：
+
+#box {
+  width: 50px;
+  height: 50px;
+  background-color: #000;
+}
+JavaScript代码：
+var element = document.getElementById('box');
+var left = 0;
+var animateCallback = function() {
+    element.style.marginLeft = (++left) + 'px';
+  // clear interval after 60 frame is moved
+  if (left == 60) {
+    clearInterval(interval);
+  }
+}
+var interval = setInterval(animateCallback, (1000 / 60));
+
+通过上面的代码，我们成功实现了一个平滑的动画效果，但是在PC或者手机上面显示时会存在一个很大的问题，并且很难被发现。那就是setInterval函数在n毫秒后，
+并不能保证被调用（想了解更多请阅读Mozilla文档）。总的说来，setInterval被看成是延迟执行回调函数的web API。然而，回调函数总是会被阻塞，这意味着如果网页
+正忙于处理其它事务，回调就不得不等待，直到栈中的异步任务被清空为止（了解更多，请阅读how JavaScript works，该链接可以让你了解到栈是什么，
+以及web api工作原理）。不仅如此，回调函数的执行可能会消耗掉比16.7ms更长的时间，这就意味着，动画将运行超过1s（此时，回调执行60次），60FPS也就无法实现。
+
+接下来，我们了解一下什么是失帧？首先，浏览器会以最大m次/秒刷新屏幕。数字m取决于电脑的屏幕刷新率，浏览器的刷新率，以及CPU、GPU的处理能力。
+如果你的浏览器只能以30帧/s的速度刷新屏幕（由于上面的一个或者多个原因造成），那么以60帧/秒的速度运行动画是没有什么意义的，多余的帧数将会消失。
+与此同时，对DOM结构所做的更改要比浏览器渲染的要多，这也被称为布局抖动，因为这些操作是同步的，会影响网站的性能以及绘制操作，从而导致动画效果不佳。
+HTML代码：
+
+<div id="box"></div>
+CSS代码：
+
+#box{
+  width: 50px;
+  height: 50px;
+  background-color: #000;
+}
+javascript代码：
+
+var element = document.getElementById('box');
+var left = 0;
+var rAF_ID;
+var rAFCallback = function(){
+    element.style.marginLeft = (++left) + 'px';
+  // cancel animation frame after 60px
+  if( left == 60 ) {
+    cancelAnimationFrame(rAF_ID);
+  }else {
+      rAF_ID = requestAnimationFrame( rAFCallback );
+  }
+}
+rAF_ID = requestAnimationFrame( rAFCallback );
+requestAnimationFrame返回请求的id（整数），我们可以使用这个id来取消请求，使用cancelAnimationFrame(id)方法会取消回调的执行，
+从而停止动画的执行（这里使用的递归）。rAF并不能保证提供60FPS的动画效果，这只是一种避免丢帧以及提高效率的方法，从而帮助获取更多的FPS值。
+这就意味着，如果我们通过使用移动多少像素来取消动画，例如上面例子的60px，那么根据系统中浏览器刷新率，动画可以持续1s（60FPS）、2s（120FPS）或者更长时间。
